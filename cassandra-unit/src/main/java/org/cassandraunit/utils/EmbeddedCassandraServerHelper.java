@@ -3,10 +3,12 @@ package org.cassandraunit.utils;
 import com.datastax.driver.core.KeyspaceMetadata;
 import com.datastax.driver.core.QueryOptions;
 import com.datastax.driver.core.Session;
+import com.google.common.base.Verify;
+
 import org.apache.cassandra.config.DatabaseDescriptor;
 import org.apache.cassandra.db.commitlog.CommitLog;
 import org.apache.cassandra.exceptions.ConfigurationException;
-import org.apache.cassandra.io.util.FileUtils;
+import org.apache.cassandra.io.FSWriteError;
 import org.apache.cassandra.service.CassandraDaemon;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.thrift.transport.TTransportException;
@@ -291,12 +293,28 @@ public class EmbeddedCassandraServerHelper {
                 .filter(nonSystemKeyspaces())
                 .forEach(CqlOperations.dropKeyspace(session));
     }
+
+    private static void deleteRecursive(File dir) {
+        if (!dir.exists()) {
+            return;
+        }
+        if (dir.isDirectory()) {
+            File[] children = dir.listFiles();
+            if (children != null) {
+                for (File child : children) {
+                    deleteRecursive(child);
+                }
+            }
+        }
+        try {
+            Files.delete(dir.toPath());
+        } catch (Throwable t) {
+            throw new FSWriteError(t, dir);
+        }
+    }
     
     private static void rmdir(String dir) {
-        File dirFile = new File(dir);
-        if (dirFile.exists()) {
-            FileUtils.deleteRecursive(dirFile);
-        }
+        deleteRecursive(new File(dir));
     }
 
     /**
@@ -319,10 +337,12 @@ public class EmbeddedCassandraServerHelper {
      * Creates a directory
      *
      * @param dir
-     * @throws IOException
      */
     private static void mkdir(String dir) {
-        FileUtils.createDirectory(dir);
+        File dirFile = new File(dir);
+        if (!dirFile.exists() && !dirFile.mkdirs()) {
+            throw new FSWriteError(new IOException("Failed to mkdirs " + dir), dir);
+        }
     }
 
     private static void cleanupAndLeaveDirs() throws IOException {
@@ -341,7 +361,7 @@ public class EmbeddedCassandraServerHelper {
             File dir = new File(dirName);
             if (!dir.exists())
                 throw new RuntimeException("No such directory: " + dir.getAbsolutePath());
-            FileUtils.deleteRecursive(dir);
+            rmdir(dirName);
         }
     }
 
