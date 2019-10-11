@@ -1,10 +1,8 @@
 package org.cassandraunit.utils;
 
-import com.datastax.driver.core.KeyspaceMetadata;
-import com.datastax.driver.core.QueryOptions;
-import com.datastax.driver.core.Session;
-import com.google.common.base.Verify;
-
+import com.datastax.oss.driver.api.core.CqlSession;
+import com.datastax.oss.driver.api.core.config.DefaultDriverOption;
+import com.datastax.oss.driver.api.core.config.DriverConfigLoader;
 import org.apache.cassandra.config.DatabaseDescriptor;
 import org.apache.cassandra.db.commitlog.CommitLog;
 import org.apache.cassandra.exceptions.ConfigurationException;
@@ -16,22 +14,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.yaml.snakeyaml.reader.UnicodeReader;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStreamWriter;
-import java.io.Writer;
+import java.io.*;
+import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.time.Duration;
+import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -71,8 +61,7 @@ public class EmbeddedCassandraServerHelper {
 
     private static CassandraDaemon cassandraDaemon = null;
     private static String launchedYamlFile;
-    private static com.datastax.driver.core.Cluster cluster;
-    private static Session session;
+    private static CqlSession session;
 
     public static void startEmbeddedCassandra() throws TTransportException, IOException, InterruptedException, ConfigurationException {
         startEmbeddedCassandra(DEFAULT_STARTUP_TIMEOUT);
@@ -159,7 +148,6 @@ public class EmbeddedCassandraServerHelper {
             }
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                 if (session != null) session.close();
-                if (cluster != null) cluster.close();
             }));
         } catch (InterruptedException e) {
             log.error("Interrupted waiting for Cassandra daemon to start:", e);
@@ -206,35 +194,21 @@ public class EmbeddedCassandraServerHelper {
             }
     }
 
-    public static com.datastax.driver.core.Cluster getCluster() {
-        initCluster();
-        return cluster;
-    }
-
-    public static Session getSession() {
+    public static CqlSession getSession() {
         initSession();
         return session;
     }
 
-    private static synchronized void initCluster() {
-        if (cluster == null) {
-            QueryOptions queryOptions = new QueryOptions();
-            queryOptions.setRefreshSchemaIntervalMillis(0);
-            queryOptions.setRefreshNodeIntervalMillis(0);
-            queryOptions.setRefreshNodeListIntervalMillis(0);
-            cluster = com.datastax.driver.core.Cluster.builder()
-                    .addContactPoints(EmbeddedCassandraServerHelper.getHost())
-                    .withPort(EmbeddedCassandraServerHelper.getNativeTransportPort())
-                    .withoutJMXReporting()
-                    .withQueryOptions(queryOptions)
-                    .build();
-        }
-    }
-
     private static synchronized void initSession() {
         if (session == null) {
-            initCluster();
-            session = cluster.connect();
+            DriverConfigLoader configLoader = DriverConfigLoader.programmaticBuilder()
+                    .withDuration(DefaultDriverOption.REQUEST_TIMEOUT, Duration.ofSeconds(0))
+                    .build();
+            session = CqlSession.builder()
+                    .addContactPoint(new InetSocketAddress(EmbeddedCassandraServerHelper.getHost(), EmbeddedCassandraServerHelper.getNativeTransportPort()))
+                    .withConfigLoader(configLoader)
+                    .withLocalDatacenter("datacenter1")
+                    .build();
         }
     }
 
@@ -276,7 +250,8 @@ public class EmbeddedCassandraServerHelper {
 
     private static void cleanDataWithNativeDriver(String keyspace, String... excludedTables) {
         HashSet<String> excludedTableList = new HashSet<>(Arrays.asList(excludedTables));
-        cluster.getMetadata().getKeyspace(keyspace).getTables().stream()
+
+        session.getMetadata().getKeyspace(keyspace).get().getTables().values().stream()
                 .map(table -> table.getName())
                 .filter(tableName -> !excludedTableList.contains(tableName))
                 .map(tableName -> keyspace + "." + tableName)
@@ -288,8 +263,8 @@ public class EmbeddedCassandraServerHelper {
     }
 
     private static void dropKeyspacesWithNativeDriver() {
-        cluster.getMetadata().getKeyspaces().stream()
-                .map(KeyspaceMetadata::getName)
+        session.getMetadata().getKeyspaces().values().stream()
+                .map(keyspaceMetadata -> keyspaceMetadata.getName().toString())
                 .filter(nonSystemKeyspaces())
                 .forEach(CqlOperations.dropKeyspace(session));
     }
