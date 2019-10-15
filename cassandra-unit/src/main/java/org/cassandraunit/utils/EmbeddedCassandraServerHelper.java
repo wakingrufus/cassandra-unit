@@ -9,7 +9,6 @@ import org.apache.cassandra.exceptions.ConfigurationException;
 import org.apache.cassandra.io.FSWriteError;
 import org.apache.cassandra.service.CassandraDaemon;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.thrift.transport.TTransportException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.yaml.snakeyaml.reader.UnicodeReader;
@@ -63,27 +62,27 @@ public class EmbeddedCassandraServerHelper {
     private static String launchedYamlFile;
     private static CqlSession session;
 
-    public static void startEmbeddedCassandra() throws TTransportException, IOException, InterruptedException, ConfigurationException {
+    public static void startEmbeddedCassandra() throws IOException, InterruptedException, ConfigurationException {
         startEmbeddedCassandra(DEFAULT_STARTUP_TIMEOUT);
     }
 
-    public static void startEmbeddedCassandra(long timeout) throws TTransportException, ConfigurationException, IOException {
+    public static void startEmbeddedCassandra(long timeout) throws ConfigurationException, IOException {
         startEmbeddedCassandra(DEFAULT_CASSANDRA_YML_FILE, timeout);
     }
 
-    public static void startEmbeddedCassandra(String yamlFile) throws TTransportException, IOException, ConfigurationException {
+    public static void startEmbeddedCassandra(String yamlFile) throws IOException, ConfigurationException {
         startEmbeddedCassandra(yamlFile, DEFAULT_STARTUP_TIMEOUT);
     }
 
-    public static void startEmbeddedCassandra(String yamlFile, long timeout) throws TTransportException, IOException, ConfigurationException {
+    public static void startEmbeddedCassandra(String yamlFile, long timeout) throws IOException, ConfigurationException {
         startEmbeddedCassandra(yamlFile, DEFAULT_TMP_DIR, timeout);
     }
 
-    public static void startEmbeddedCassandra(String yamlFile, String tmpDir) throws TTransportException, IOException, ConfigurationException {
+    public static void startEmbeddedCassandra(String yamlFile, String tmpDir) throws IOException, ConfigurationException {
         startEmbeddedCassandra(yamlFile, tmpDir, DEFAULT_STARTUP_TIMEOUT);
     }
 
-    public static void startEmbeddedCassandra(String yamlFile, String tmpDir, long timeout) throws TTransportException, IOException, ConfigurationException {
+    public static void startEmbeddedCassandra(String yamlFile, String tmpDir, long timeout) throws IOException, ConfigurationException {
         if (cassandraDaemon != null) {
             /* nothing to do Cassandra is already started */
             return;
@@ -99,13 +98,12 @@ public class EmbeddedCassandraServerHelper {
         startEmbeddedCassandra(file, tmpDir, timeout);
     }
 
-    public static void startEmbeddedCassandra(File file, long timeout) throws TTransportException, IOException, ConfigurationException {
+    public static void startEmbeddedCassandra(File file, long timeout) throws IOException, ConfigurationException {
         startEmbeddedCassandra(file, DEFAULT_TMP_DIR, timeout);
     }
         /**
          * Set embedded cassandra up and spawn it in a new thread.
          *
-         * @throws TTransportException
          * @throws IOException
          * @throws ConfigurationException
          */
