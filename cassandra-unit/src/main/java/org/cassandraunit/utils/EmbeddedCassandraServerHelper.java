@@ -118,7 +118,7 @@ public class EmbeddedCassandraServerHelper {
         log.debug("Starting cassandra...");
         log.debug("Initialization needed");
 
-        String cassandraConfigFilePath = "file://" + file.getAbsolutePath();
+        String cassandraConfigFilePath = "file:" + File.separator + File.separator + file.getAbsolutePath();
         System.setProperty("cassandra.config", cassandraConfigFilePath);
         System.setProperty("cassandra-foreground", "true");
         System.setProperty("cassandra.native.epoll.enabled", "false"); // JNA doesnt cope with relocated netty
@@ -127,7 +127,7 @@ public class EmbeddedCassandraServerHelper {
         // If there is no log4j config set already, set the default config
         if (System.getProperty("log4j.configuration") == null) {
             copy(DEFAULT_LOG4J_CONFIG_FILE, tmpDir);
-            String log4jConfiguration = "file://" + tmpDir + DEFAULT_LOG4J_CONFIG_FILE;
+            String log4jConfiguration = "file:" + File.separator + File.separator + tmpDir + DEFAULT_LOG4J_CONFIG_FILE;
             System.setProperty("log4j.configuration", log4jConfiguration);
         }
 
