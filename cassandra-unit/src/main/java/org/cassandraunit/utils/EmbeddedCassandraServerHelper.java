@@ -13,14 +13,24 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.yaml.snakeyaml.reader.UnicodeReader;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -118,7 +128,7 @@ public class EmbeddedCassandraServerHelper {
         log.debug("Starting cassandra...");
         log.debug("Initialization needed");
 
-        String cassandraConfigFilePath = "file:" + File.separator + File.separator + file.getAbsolutePath();
+        String cassandraConfigFilePath = "file:/" + file.getAbsolutePath();
         System.setProperty("cassandra.config", cassandraConfigFilePath);
         System.setProperty("cassandra-foreground", "true");
         System.setProperty("cassandra.native.epoll.enabled", "false"); // JNA doesnt cope with relocated netty
@@ -127,7 +137,7 @@ public class EmbeddedCassandraServerHelper {
         // If there is no log4j config set already, set the default config
         if (System.getProperty("log4j.configuration") == null) {
             copy(DEFAULT_LOG4J_CONFIG_FILE, tmpDir);
-            String log4jConfiguration = "file:" + File.separator + File.separator + tmpDir + DEFAULT_LOG4J_CONFIG_FILE;
+            String log4jConfiguration = "file:/" + tmpDir + DEFAULT_LOG4J_CONFIG_FILE;
             System.setProperty("log4j.configuration", log4jConfiguration);
         }
 
