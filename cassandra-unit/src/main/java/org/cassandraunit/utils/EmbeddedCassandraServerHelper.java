@@ -128,7 +128,8 @@ public class EmbeddedCassandraServerHelper {
         log.debug("Starting cassandra...");
         log.debug("Initialization needed");
 
-        String cassandraConfigFilePath = "file:/" + file.getAbsolutePath();
+        String cassandraConfigFilePath = file.getAbsolutePath();
+        cassandraConfigFilePath = (cassandraConfigFilePath.startsWith("/") ? "file://" : "file:/") + cassandraConfigFilePath;
         System.setProperty("cassandra.config", cassandraConfigFilePath);
         System.setProperty("cassandra-foreground", "true");
         System.setProperty("cassandra.native.epoll.enabled", "false"); // JNA doesnt cope with relocated netty
